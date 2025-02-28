@@ -250,6 +250,7 @@ func RunMount(option *MountOptions, umask os.FileMode) bool {
 		UidGidMapper:       uidGidMapper,
 		DisableXAttr:       *option.disableXAttr,
 		IsMacOs:            runtime.GOOS == "darwin",
+		Logger:             *option.logger,
 	})
 
 	// create mount root

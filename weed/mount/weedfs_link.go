@@ -10,6 +10,8 @@ import (
 	"github.com/seaweedfs/seaweedfs/weed/filer"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
 	"github.com/seaweedfs/seaweedfs/weed/pb/filer_pb"
+	al "github.com/seaweedfs/seaweedfs/weed/pb/log_pb"
+	"github.com/seaweedfs/seaweedfs/weed/util/log_access"
 )
 
 /*
@@ -50,6 +52,11 @@ func (wfs *WFS) Link(cancel <-chan struct{}, in *fuse.LinkIn, name string, out *
 
 	// hardlink is not allowed in WORM mode
 	if wormEnforced, _ := wfs.wormEnforcedForEntry(oldEntryPath, oldEntry); wormEnforced {
+		fileSize := uint64(0)
+		if oldEntry != nil {
+			fileSize = oldEntry.Attributes.FileSize
+		}
+		go log_access.SendLog(wfs.option.Logger, al.AccessType_LINK_FILE, string(oldEntryPath), fileSize, in.Pid)
 		return fuse.EPERM
 	}
 

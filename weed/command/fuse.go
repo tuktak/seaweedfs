@@ -183,6 +183,8 @@ func runFuse(cmd *Command, args []string) bool {
 			} else {
 				panic(fmt.Errorf("readOnly: %s", err))
 			}
+		case "logger": // set access logger's TCP address
+			mountOptions.logger = &parameter.value
 		case "cpuprofile":
 			mountCpuProfile = &parameter.value
 		case "memprofile":

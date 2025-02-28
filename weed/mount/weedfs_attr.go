@@ -9,6 +9,8 @@ import (
 	"github.com/seaweedfs/seaweedfs/weed/filer"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
 	"github.com/seaweedfs/seaweedfs/weed/pb/filer_pb"
+	al "github.com/seaweedfs/seaweedfs/weed/pb/log_pb"
+	"github.com/seaweedfs/seaweedfs/weed/util/log_access"
 )
 
 func (wfs *WFS) GetAttr(cancel <-chan struct{}, input *fuse.GetAttrIn, out *fuse.AttrOut) (code fuse.Status) {
@@ -53,6 +55,8 @@ func (wfs *WFS) SetAttr(cancel <-chan struct{}, input *fuse.SetAttrIn, out *fuse
 
 	wormEnforced, wormEnabled := wfs.wormEnforcedForEntry(path, entry)
 	if wormEnforced {
+		fileSize := entry.Attributes.FileSize
+		go log_access.SendLog(wfs.option.Logger, al.AccessType_CHMOD_FILE, string(path), fileSize, input.Pid)
 		return fuse.EPERM
 	}
 

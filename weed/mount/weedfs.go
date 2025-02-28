@@ -48,6 +48,7 @@ type Option struct {
 	Quota              int64
 	DisableXAttr       bool
 	IsMacOs            bool
+	Logger             string // access logger's TCP address
 
 	MountUid         uint32
 	MountGid         uint32

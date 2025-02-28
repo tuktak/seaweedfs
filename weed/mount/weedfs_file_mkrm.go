@@ -2,14 +2,12 @@ package mount
 
 import (
 	"context"
-	"fmt"
-	"syscall"
-	"time"
 
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/seaweedfs/seaweedfs/weed/filer"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
 	"github.com/seaweedfs/seaweedfs/weed/pb/filer_pb"
+	al "github.com/seaweedfs/seaweedfs/weed/pb/log_pb"
+	"github.com/seaweedfs/seaweedfs/weed/util/log_access"
 )
 
 /**
@@ -37,77 +35,77 @@ func (wfs *WFS) Create(cancel <-chan struct{}, in *fuse.CreateIn, name string, o
  */
 func (wfs *WFS) Mknod(cancel <-chan struct{}, in *fuse.MknodIn, name string, out *fuse.EntryOut) (code fuse.Status) {
 
-	if wfs.IsOverQuota {
-		return fuse.Status(syscall.ENOSPC)
-	}
+	// if wfs.IsOverQuota {
+	// 	return fuse.Status(syscall.ENOSPC)
+	// }
 
-	if s := checkName(name); s != fuse.OK {
-		return s
-	}
+	// if s := checkName(name); s != fuse.OK {
+	// 	return s
+	// }
 
-	dirFullPath, code := wfs.inodeToPath.GetPath(in.NodeId)
-	if code != fuse.OK {
-		return
-	}
+	// dirFullPath, code := wfs.inodeToPath.GetPath(in.NodeId)
+	// if code != fuse.OK {
+	// 	return
+	// }
 
-	entryFullPath := dirFullPath.Child(name)
-	fileMode := toOsFileMode(in.Mode)
-	now := time.Now().Unix()
-	inode := wfs.inodeToPath.AllocateInode(entryFullPath, now)
+	// entryFullPath := dirFullPath.Child(name)
+	// fileMode := toOsFileMode(in.Mode)
+	// now := time.Now().Unix()
+	// inode := wfs.inodeToPath.AllocateInode(entryFullPath, now)
 
-	newEntry := &filer_pb.Entry{
-		Name:        name,
-		IsDirectory: false,
-		Attributes: &filer_pb.FuseAttributes{
-			Mtime:    now,
-			Crtime:   now,
-			FileMode: uint32(fileMode),
-			Uid:      in.Uid,
-			Gid:      in.Gid,
-			TtlSec:   wfs.option.TtlSec,
-			Rdev:     in.Rdev,
-			Inode:    inode,
-		},
-	}
+	// newEntry := &filer_pb.Entry{
+	// 	Name:        name,
+	// 	IsDirectory: false,
+	// 	Attributes: &filer_pb.FuseAttributes{
+	// 		Mtime:    now,
+	// 		Crtime:   now,
+	// 		FileMode: uint32(fileMode),
+	// 		Uid:      in.Uid,
+	// 		Gid:      in.Gid,
+	// 		TtlSec:   wfs.option.TtlSec,
+	// 		Rdev:     in.Rdev,
+	// 		Inode:    inode,
+	// 	},
+	// }
 
-	err := wfs.WithFilerClient(false, func(client filer_pb.SeaweedFilerClient) error {
+	// err := wfs.WithFilerClient(false, func(client filer_pb.SeaweedFilerClient) error {
 
-		wfs.mapPbIdFromLocalToFiler(newEntry)
-		defer wfs.mapPbIdFromFilerToLocal(newEntry)
+	// 	wfs.mapPbIdFromLocalToFiler(newEntry)
+	// 	defer wfs.mapPbIdFromFilerToLocal(newEntry)
 
-		request := &filer_pb.CreateEntryRequest{
-			Directory:                string(dirFullPath),
-			Entry:                    newEntry,
-			Signatures:               []int32{wfs.signature},
-			SkipCheckParentDirectory: true,
-		}
+	// 	request := &filer_pb.CreateEntryRequest{
+	// 		Directory:                string(dirFullPath),
+	// 		Entry:                    newEntry,
+	// 		Signatures:               []int32{wfs.signature},
+	// 		SkipCheckParentDirectory: true,
+	// 	}
 
-		glog.V(1).Infof("mknod: %v", request)
-		if err := filer_pb.CreateEntry(client, request); err != nil {
-			glog.V(0).Infof("mknod %s: %v", entryFullPath, err)
-			return err
-		}
+	// 	glog.V(1).Infof("mknod: %v", request)
+	// 	if err := filer_pb.CreateEntry(client, request); err != nil {
+	// 		glog.V(0).Infof("mknod %s: %v", entryFullPath, err)
+	// 		return err
+	// 	}
 
-		if err := wfs.metaCache.InsertEntry(context.Background(), filer.FromPbEntry(request.Directory, request.Entry)); err != nil {
-			return fmt.Errorf("local mknod %s: %v", entryFullPath, err)
-		}
+	// 	if err := wfs.metaCache.InsertEntry(context.Background(), filer.FromPbEntry(request.Directory, request.Entry)); err != nil {
+	// 		return fmt.Errorf("local mknod %s: %v", entryFullPath, err)
+	// 	}
 
-		return nil
-	})
+	// 	return nil
+	// })
 
-	glog.V(3).Infof("mknod %s: %v", entryFullPath, err)
+	// glog.V(3).Infof("mknod %s: %v", entryFullPath, err)
 
-	if err != nil {
-		return fuse.EIO
-	}
+	// if err != nil {
+	// 	return fuse.EIO
+	// }
 
-	// this is to increase nlookup counter
-	inode = wfs.inodeToPath.Lookup(entryFullPath, newEntry.Attributes.Crtime, false, false, inode, true)
+	// // this is to increase nlookup counter
+	// inode = wfs.inodeToPath.Lookup(entryFullPath, newEntry.Attributes.Crtime, false, false, inode, true)
 
-	wfs.outputPbEntry(out, inode, newEntry)
+	// wfs.outputPbEntry(out, inode, newEntry)
 
-	return fuse.OK
-
+	// return fuse.OK
+	return fuse.EPERM
 }
 
 /** Remove a file */
@@ -131,6 +129,11 @@ func (wfs *WFS) Unlink(cancel <-chan struct{}, header *fuse.InHeader, name strin
 	}
 
 	if wormEnforced, _ := wfs.wormEnforcedForEntry(entryFullPath, entry); wormEnforced {
+		fileSize := uint64(0)
+		if entry != nil {
+			fileSize = entry.Attributes.FileSize
+		}
+		go log_access.SendLog(wfs.option.Logger, al.AccessType_DELETE_FILE, string(entryFullPath), fileSize, header.Pid)
 		return fuse.EPERM
 	}
 

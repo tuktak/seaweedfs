@@ -12,7 +12,9 @@ import (
 	"github.com/seaweedfs/seaweedfs/weed/filer"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
 	"github.com/seaweedfs/seaweedfs/weed/pb/filer_pb"
+	al "github.com/seaweedfs/seaweedfs/weed/pb/log_pb"
 	"github.com/seaweedfs/seaweedfs/weed/util"
+	"github.com/seaweedfs/seaweedfs/weed/util/log_access"
 )
 
 /** Rename a file
@@ -167,6 +169,11 @@ func (wfs *WFS) Rename(cancel <-chan struct{}, in *fuse.RenameIn, oldName string
 	}
 
 	if wormEnforced, _ := wfs.wormEnforcedForEntry(oldPath, oldEntry); wormEnforced {
+		fileSize := uint64(0)
+		if oldEntry != nil {
+			fileSize = oldEntry.Attributes.FileSize
+		}
+		go log_access.SendLog(wfs.option.Logger, al.AccessType_RENAME_FILE, string(oldPath), fileSize, in.Pid)
 		return fuse.EPERM
 	}
 
