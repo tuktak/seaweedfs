@@ -2,10 +2,10 @@ package log_access
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 
+	"github.com/seaweedfs/seaweedfs/weed/glog"
 	al "github.com/seaweedfs/seaweedfs/weed/pb/log_pb"
 	"google.golang.org/protobuf/proto"
 )
@@ -49,11 +49,15 @@ func SendLog(
 
 	processName, err := pidToName(processId)
 	if err != nil {
-		log.Printf("Error getting process name: %v", err)
+		glog.Warningf("Error getting process name: %v", err)
 		processName = fmt.Sprintf("PID %d", processId)
 	}
 
-	log.Printf("Access log: %s %s %s %d %s", server, accessType, filePath, fileSize, processName)
+	glog.Warningf("Access log: %s %s %s %d %s", server, accessType, filePath, fileSize, processName)
+
+	if server == "" {
+		return
+	}
 
 	info := &al.AccessInfo{
 		AccessType:  accessType,
@@ -64,19 +68,19 @@ func SendLog(
 	}
 	out, err := proto.Marshal(info)
 	if err != nil {
-		log.Printf("Error marshalling access info: %v", err)
+		glog.Warningf("Error marshalling access info: %v", err)
 		return
 	}
 
 	conn, err := net.Dial("tcp", server)
 	if err != nil {
-		log.Printf("Error connecting to server: %s, %v", server, err)
+		glog.Warningf("Error connecting to server: %s, %v", server, err)
 		return
 	}
 	defer conn.Close()
 
 	_, err = conn.Write(out)
 	if err != nil {
-		log.Printf("Error sending access info: %v", err)
+		glog.Warningf("Error sending access info: %v", err)
 	}
 }
